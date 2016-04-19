@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+source $(dirname $0)/version
+
+cd $(dirname $0)/../package
+
+TAG=${TAG:-dev}
+REPO=${REPO:-cjellick}
+
+cp ../bin/longhorn-agent .
+docker build -t ${REPO}/longhorn-agent:${TAG} .
+
+echo Built ${REPO}/longhorn-agent:${TAG}
