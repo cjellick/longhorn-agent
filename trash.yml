@@ -1,0 +1,27 @@
+import:
+- package: github.com/gorilla/mux
+  version: 26a6070f849969ba72b72256e9f14cf519751690
+
+- package: github.com/gorilla/context
+  version: 1c83b3eabd45b6d76072b66b746c20815fb2872d
+
+- package: github.com/rancher/go-rancher-metadata
+  version: 3336d4004ef4ad0809bf7131124a74b90f5bfa40
+
+- package: github.com/Sirupsen/logrus
+  version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
+
+- package: github.com/codegangsta/cli
+  version: c31a7975863e7810c92e2e288a9ab074f9a88f29
+
+- package: github.com/rancher/longhorn
+  version: a317bd765977a553e384ba5b508f3c9850a5a960
+
+- package: github.com/rancher/go-rancher
+  version: 5ed452cd07a408bc6c96d10766a963c0d7585518
+
+- package: github.com/gorilla/websocket
+  version: e2e3d8414d0fbae04004f151979f4e27c6747fe7
+
+- package: github.com/frostschutz/go-fibmap
+  version: 5fc9f8c1ed479f20414771a17b9686ee77029676
