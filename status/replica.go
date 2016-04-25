@@ -26,7 +26,7 @@ func NewReplicaStatus() (*ReplicaStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	addr := fmt.Sprintf("tcp://%s:%d", self.PrimaryIp, 9502)
+	addr := controller.ReplicaAddress(self.PrimaryIp, 9502)
 
 	controllerClient := client.NewControllerClient("http://controller:9501/v1")
 	replicaClient, err := client.NewReplicaClient("http://localhost:9502/v1")
@@ -43,9 +43,14 @@ func NewReplicaStatus() (*ReplicaStatus, error) {
 
 func (s *ReplicaStatus) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	// Checking against the replica is easy: just ensure that the API is responding.
-	_, err := s.replica.GetReplica()
+	replica, err := s.replica.GetReplica()
 	if err != nil {
 		writeError(rw, err)
+		return
+	}
+
+	if replica.State != "open" {
+		writeErrorString(rw, fmt.Sprintf("Replica is in state %v", replica.State))
 		return
 	}
 
