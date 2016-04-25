@@ -20,17 +20,14 @@ func New() (*Replica, error) {
 	}, nil
 }
 
-
 func (r *Replica) Close() error {
 	logrus.Infof("Shutting down replica.")
 	return nil
 }
 
-func (c *Replica) Start() error {
+func (r *Replica) Start() error {
 	logrus.Infof("Opening replica.")
-	err := c.client.OpenReplica("10737418240") // hard code 10 gigs
+	// TODO Unhardcode
+	err := r.client.OpenReplica("10737418240")
 	return err
 }
-
-
-

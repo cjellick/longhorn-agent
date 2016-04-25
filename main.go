@@ -76,17 +76,20 @@ func runApp(context *cli.Context) error {
 }
 
 func runPing(context *cli.Context) error {
-	status, err := status.New()
+
+	controller := status.NewControllerStatus()
+
+	replica, err := status.NewReplicaStatus()
 	if err != nil {
 		return err
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/controller/status", status.ControllerStatus)
-	r.HandleFunc("/replica/status", status.ReplicaStatus)
+	r.Handle("/controller/status", controller)
+	r.Handle("/replica/status", replica)
 	http.Handle("/", r)
 
 	listen := context.GlobalString("listen")
-	logrus.Info("Listening on ", listen)
+	logrus.Info("Listening for healthcheck requests on ", listen)
 	return http.ListenAndServe(listen, nil)
 }

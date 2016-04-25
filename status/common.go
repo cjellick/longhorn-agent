@@ -6,22 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-type Client struct {
-}
-
-func New() (*Client, error) {
-	return &Client{}, nil
-}
-
-func (s *Client) ControllerStatus(rw http.ResponseWriter, r *http.Request) {
-	writeOk(rw)
-}
-
-func (s *Client) ReplicaStatus(rw http.ResponseWriter, r *http.Request) {
-	writeOk(rw)
-}
-
-func writeOk(rw http.ResponseWriter) {
+func writeOK(rw http.ResponseWriter) {
 	logrus.Debugf("Reporting OK.")
 	rw.Write([]byte("OK"))
 }
@@ -35,5 +20,7 @@ func writeErrorString(rw http.ResponseWriter, msg string) {
 		logrus.Infof("Reporting unhealthy status: %v", msg)
 		rw.WriteHeader(http.StatusServiceUnavailable)
 		rw.Write([]byte(msg))
+	} else {
+		logrus.Warn("Not reporting a status. ResponseWriter is null.")
 	}
 }

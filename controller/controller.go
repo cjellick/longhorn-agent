@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	metadataUrl = "http://rancher-metadata/2015-12-19"
+	MetadataURL = "http://rancher-metadata/2015-12-19"
 	replicaWait = 300
 )
 
@@ -88,7 +88,7 @@ func (c *Controller) syncReplicas() (retErr error) {
 }
 
 func (c *Controller) replicas(healthyOnly bool) (int, []replica, error) {
-	client, err := metadata.NewClientAndWait(metadataUrl)
+	client, err := metadata.NewClientAndWait(MetadataURL)
 	if err != nil {
 		return 0, nil, err
 	}
