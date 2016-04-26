@@ -10,6 +10,7 @@ import (
 	"github.com/rancher/go-rancher-metadata/metadata"
 	lclient "github.com/rancher/longhorn/client"
 	"github.com/rancher/longhorn/controller/rest"
+	"os"
 )
 
 const (
@@ -45,7 +46,25 @@ func (c *Controller) Close() error {
 }
 
 func (c *Controller) Start() error {
-	logrus.Infof("Starting Longhorn. Getting replicas to start with.")
+	logrus.Infof("Starting Longhorn.")
+
+	volume, err := c.client.GetVolume()
+	if err != nil {
+		return fmt.Errorf("Error while getting volume: %v", err)
+	}
+
+	if volume.ReplicaCount == 0 {
+		if err = c.getReplicasAndStart(); err != nil {
+			return err
+		}
+	} else {
+		logrus.Infof("Volume is started with %v replicas.", volume.ReplicaCount)
+	}
+
+	return c.refresh()
+}
+
+func (c *Controller) getReplicasAndStart() error {
 	var fromMetadata map[string]replica
 	var scale int
 	for {
@@ -87,16 +106,13 @@ func (c *Controller) Start() error {
 		}
 	}
 
-	addresses := make([]string, len(startingReplicas))
-
-	i := 0
+	addresses := []string{}
 	for address, repl := range startingReplicas {
 		if err := c.ensureOpen(repl); err != nil {
 			logrus.Errorf("Replica %v is not open. Removing it from startup list. Error while waiting for open: %v", address, err)
 			continue
 		}
-		addresses[i] = address
-		i++
+		addresses = append(addresses, address)
 	}
 
 	if len(addresses) == 0 {
@@ -108,21 +124,20 @@ func (c *Controller) Start() error {
 		return fmt.Errorf("Error starting controller: %v", err)
 	}
 
-	// TODO Make sure I don't have to kill or otherwise remove dirty replicas
-	return c.refresh()
+	return nil
 }
 
 func (c *Controller) refresh() error {
 	for {
 		if err := c.syncReplicas(); err != nil {
-			return fmt.Errorf("Failed to sync replicas: %v", err)
+			logrus.Errorf("Failed to sync replicas: %v", err)
 		}
 		time.Sleep(5 * time.Second)
 	}
 }
 
 func (c *Controller) syncReplicas() (retErr error) {
-	logrus.Infof("Syncing replicas.")
+	logrus.Debugf("Syncing replicas.")
 
 	replicasInController, err := c.client.ListReplicas()
 	if err != nil {
@@ -171,6 +186,9 @@ func (c *Controller) addReplica(r replica) error {
 	}
 
 	cmd := exec.Command("longhorn", "add", ReplicaAddress(r.host, r.port))
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
 	return cmd.Run()
 }
 
