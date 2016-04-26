@@ -43,14 +43,9 @@ func NewReplicaStatus() (*ReplicaStatus, error) {
 
 func (s *ReplicaStatus) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	// Checking against the replica is easy: just ensure that the API is responding.
-	replica, err := s.replica.GetReplica()
+	_, err := s.replica.GetReplica()
 	if err != nil {
 		writeError(rw, err)
-		return
-	}
-
-	if replica.State != "open" {
-		writeErrorString(rw, fmt.Sprintf("Replica is in state %v", replica.State))
 		return
 	}
 
