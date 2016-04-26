@@ -8,7 +8,6 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/gorilla/mux"
 	"github.com/rancher/longhorn-agent/controller"
-	"github.com/rancher/longhorn-agent/replica"
 	"github.com/rancher/longhorn-agent/status"
 )
 
@@ -60,14 +59,6 @@ func runApp(context *cli.Context) error {
 		defer c.Close()
 		return c.Start()
 	} else if runReplica {
-		r, err := replica.New()
-		if err != nil {
-			return err
-		}
-		defer r.Close()
-		if err := r.Start(); err != nil {
-			return err
-		}
 		return runPing(context)
 	}
 

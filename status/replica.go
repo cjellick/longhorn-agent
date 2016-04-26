@@ -7,15 +7,17 @@ import (
 	md "github.com/rancher/go-rancher-metadata/metadata"
 	"github.com/rancher/longhorn/client"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/rancher/longhorn-agent/controller"
 	"strings"
 )
 
 type ReplicaStatus struct {
-	controller *client.ControllerClient
-	replica    *client.ReplicaClient
-	metadata   *md.Client
-	address    string
+	controller          *client.ControllerClient
+	replica             *client.ReplicaClient
+	metadata            *md.Client
+	address             string
+	controllerLastError string
 }
 
 func NewReplicaStatus() (*ReplicaStatus, error) {
@@ -50,28 +52,42 @@ func (s *ReplicaStatus) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.checkReplicaStatusInController(rw); err != nil {
-		writeError(rw, err)
+	if ok, msg := s.checkReplicaStatusInController(rw); !ok {
+		writeErrorString(rw, msg)
 		return
 	}
 
 	writeOK(rw)
 }
 
-func (s *ReplicaStatus) checkReplicaStatusInController(rw http.ResponseWriter) error {
+func (s *ReplicaStatus) checkReplicaStatusInController(rw http.ResponseWriter) (bool, string) {
 	replicas, err := s.controller.ListReplicas()
 	if err != nil {
-		// TODO If this errors out, we should probably return healthy as a cached response
-		return fmt.Errorf("Couldn't get replicas from controller. Error: %v", err)
+		logrus.Warnf("Couldn't get replicas from controller. Reporting cached status.")
+		return s.reportCacheControllerResponse()
 	}
 	for _, replica := range replicas {
 		if replica.Address == s.address {
 			if strings.EqualFold(replica.Mode, "err") {
-				return fmt.Errorf("Replica %v is in error mode.", s.address)
+				return s.cacheControllerResponse(false, fmt.Sprintf("Replica %v is in error mode.", s.address))
 			}
-			return nil // Replica is healthy
+			return s.cacheControllerResponse(true, "")
 		}
 	}
 
-	return fmt.Errorf("Replica %v is not in the controller's list of replicas. Current list: %v", s.address, replicas)
+	return s.cacheControllerResponse(false, fmt.Sprintf("Replica %v is not in the controller's list of replicas. Current list: %v", s.address, replicas))
+}
+
+func (s *ReplicaStatus) reportCacheControllerResponse() (bool, string) {
+	healthy := len(s.controllerLastError) == 0
+	return healthy, s.controllerLastError
+}
+
+func (s *ReplicaStatus) cacheControllerResponse(ok bool, msg string) (bool, string) {
+	if ok {
+		s.controllerLastError = ""
+	} else {
+		s.controllerLastError = msg + " (cached response)"
+	}
+	return ok, msg
 }

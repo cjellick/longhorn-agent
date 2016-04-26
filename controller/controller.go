@@ -10,11 +10,14 @@ import (
 	"github.com/rancher/go-rancher-metadata/metadata"
 	lclient "github.com/rancher/longhorn/client"
 	"github.com/rancher/longhorn/controller/rest"
+	"io/ioutil"
+	"net/http"
 	"os"
 )
 
 const (
-	MetadataURL = "http://rancher-metadata/2015-12-19"
+	defaultVolumeSize = "10737418240" // 10 gb
+	MetadataURL       = "http://rancher-metadata/2015-12-19"
 )
 
 type replica struct {
@@ -22,6 +25,7 @@ type replica struct {
 	host        string
 	port        int
 	healthState string
+	size        string
 }
 
 func ReplicaAddress(host string, port int) string {
@@ -197,16 +201,18 @@ func (c *Controller) ensureOpen(r replica) error {
 		return err
 	}
 
-	err = backoff(time.Second*10, "Timed out waiting for replica to open.", func() (bool, error) {
-		resp, err := client.GetReplica()
-		if err != nil {
-			return false, err
+	replica, err := client.GetReplica()
+	if err != nil {
+		return err
+	}
+
+	if replica.State != "open" {
+		if err := client.OpenReplica(r.size); err != nil {
+			return fmt.Errorf("Error opening replica %v: %v", r.host, err)
 		}
+	}
 
-		return resp.State == "open", nil
-	})
-
-	return err
+	return nil
 }
 
 func backoff(maxDuration time.Duration, timeoutMessage string, f func() (bool, error)) error {
@@ -243,6 +249,25 @@ func (c *Controller) replicasFromMetadata() (int, map[string]replica, error) {
 		return 0, nil, err
 	}
 
+	// Unmarshalling the metadata as json is forcing it to a bad format
+	resp, err := http.Get(MetadataURL + "/self/service/metadata/longhorn/volume_size")
+	if err != nil {
+		return 0, nil, err
+	}
+
+	size := ""
+	if resp.StatusCode == 200 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return 0, nil, err
+		}
+		size = string(body)
+	}
+
+	if size == "" {
+		size = defaultVolumeSize
+	}
+
 	containers := map[string]metadata.Container{}
 	for _, container := range service.Containers {
 		if c, ok := containers[container.Name]; !ok {
@@ -258,6 +283,7 @@ func (c *Controller) replicasFromMetadata() (int, map[string]replica, error) {
 			healthState: container.HealthState,
 			host:        container.PrimaryIp,
 			port:        9502,
+			size:        size,
 		}
 		result[ReplicaAddress(r.host, r.port)] = r
 	}
