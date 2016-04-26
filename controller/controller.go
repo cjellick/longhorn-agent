@@ -15,7 +15,6 @@ import (
 
 const (
 	MetadataURL = "http://rancher-metadata/2015-12-19"
-	replicaWait = 300
 )
 
 type replica struct {

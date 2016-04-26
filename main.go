@@ -60,7 +60,6 @@ func runApp(context *cli.Context) error {
 		defer c.Close()
 		return c.Start()
 	} else if runReplica {
-		// TODO Refactor to not suck. Put start in same container as actual repl process?
 		r, err := replica.New()
 		if err != nil {
 			return err

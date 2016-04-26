@@ -8,6 +8,7 @@ import (
 	"github.com/rancher/longhorn/client"
 
 	"github.com/rancher/longhorn-agent/controller"
+	"strings"
 )
 
 type ReplicaStatus struct {
@@ -65,12 +66,10 @@ func (s *ReplicaStatus) checkReplicaStatusInController(rw http.ResponseWriter) e
 	}
 	for _, replica := range replicas {
 		if replica.Address == s.address {
-			// TODO CHECK MODE CASE
-			if replica.Mode == "ERR" {
+			if strings.EqualFold(replica.Mode, "err") {
 				return fmt.Errorf("Replica %v is in error mode.", s.address)
 			}
-			// Replica is healthy
-			return nil
+			return nil // Replica is healthy
 		}
 	}
 

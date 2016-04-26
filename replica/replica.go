@@ -1,9 +1,19 @@
 package replica
 
 import (
+	"io/ioutil"
+	"net/http"
+
 	"github.com/Sirupsen/logrus"
 
+	"github.com/rancher/go-rancher-metadata/metadata"
 	lclient "github.com/rancher/longhorn/client"
+
+	"github.com/rancher/longhorn-agent/controller"
+)
+
+const (
+	defaultVolumeSize = "10737418240" // 10 gb
 )
 
 type Replica struct {
@@ -26,8 +36,30 @@ func (r *Replica) Close() error {
 }
 
 func (r *Replica) Start() error {
-	logrus.Infof("Opening replica.")
-	// TODO Unhardcode
-	err := r.client.OpenReplica("10737418240")
-	return err
+	_, err := metadata.NewClientAndWait(controller.MetadataURL)
+	if err != nil {
+		return err
+	}
+
+	// Unmarshalling the metadata as json is forcing it to a flot
+	resp, err := http.Get(controller.MetadataURL + "/self/service/metadata/longhorn/volume_size")
+	if err != nil {
+		return err
+	}
+
+	size := ""
+	if resp.StatusCode == 200 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		size = string(body)
+	}
+
+	if size == "" {
+		size = defaultVolumeSize
+	}
+
+	logrus.Infof("Opening replica with size %v.", size)
+	return r.client.OpenReplica(size)
 }
