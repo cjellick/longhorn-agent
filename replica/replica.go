@@ -9,6 +9,7 @@ import (
 	"github.com/rancher/go-rancher-metadata/metadata"
 	lclient "github.com/rancher/longhorn/client"
 
+	"fmt"
 	"github.com/rancher/longhorn-agent/controller"
 )
 
@@ -60,6 +61,17 @@ func (r *Replica) Start() error {
 		size = defaultVolumeSize
 	}
 
-	logrus.Infof("Opening replica with size %v.", size)
-	return r.client.OpenReplica(size)
+	replica, err := r.client.GetReplica()
+	if err != nil {
+		return fmt.Errorf("Error getting replica: %v", err)
+	}
+
+	if replica.State == "open" {
+		logrus.Infof("Replica is already open.")
+		return nil
+
+	} else {
+		logrus.Infof("Opening replica with size %v.", size)
+		return r.client.OpenReplica(size)
+	}
 }
